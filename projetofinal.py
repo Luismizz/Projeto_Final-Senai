@@ -7,7 +7,6 @@ from tkinter import messagebox
 conn = sqlite3.connect("clientes.db")
 cursor = conn.cursor()
 
-
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS clientes (
     nome TEXT NOT NULL,
@@ -18,7 +17,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 """)
 conn.commit()
 
-# Funções
+
 def cadastrar_cliente():
     nome = entry_nome.get()
     email = entry_email.get()
@@ -40,7 +39,7 @@ def mostrar_usuario():
         tree.delete(row)
     cursor.execute("SELECT * FROM clientes")
     for row in cursor.fetchall():
-        tree.insert("", "end", values=(row[1], row[2], row[3], row[4]), tags=(row[0],))
+        tree.insert("", "end", values=row)
 
 def limpar_campos():
     entry_nome.delete(0, tk.END)
@@ -68,7 +67,7 @@ def editar_cliente():
     if not selected:
         messagebox.showwarning("Atenção", "Selecione um cliente para editar.")
         return
-    id_cliente = tree.item(selected, 'tags')[0]
+    antigo = tree.item(selected, 'values')
 
     novo_nome = entry_nome.get()
     novo_email = entry_email.get()
@@ -77,8 +76,9 @@ def editar_cliente():
 
     cursor.execute("""
     UPDATE clientes SET nome=?, email=?, telefone=?, endereco=?
-    WHERE id=?
-    """, (novo_nome, novo_email, novo_telefone, novo_endereco, id_cliente))
+    WHERE nome=? AND email=? AND telefone=? AND endereco=?
+    """, (novo_nome, novo_email, novo_telefone, novo_endereco,
+          antigo[0], antigo[1], antigo[2], antigo[3]))
     conn.commit()
     mostrar_usuario()
     limpar_campos()
@@ -88,12 +88,16 @@ def excluir_cliente():
     if not selected:
         messagebox.showwarning("Atenção", "Selecione um cliente para excluir.")
         return
-    id_cliente = tree.item(selected, 'tags')[0]
+    valores = tree.item(selected, 'values')
 
-    cursor.execute("DELETE FROM clientes WHERE id=?", (id_cliente,))
+    cursor.execute("""
+    DELETE FROM clientes
+    WHERE nome=? AND email=? AND telefone=? AND endereco=?
+    """, valores)
     conn.commit()
     mostrar_usuario()
     limpar_campos()
+
 
 janela = tk.Tk()
 janela.configure(bg="#D3D3D3")
@@ -123,11 +127,9 @@ label_endereco.grid(row=4, column=0, padx=10, pady=5)
 entry_endereco = tk.Entry(janela, font=("arial", 15))
 entry_endereco.grid(row=4, column=1, padx=10, pady=5)
 
-
-tk.Button(janela, text="Cadastrar", fg= "black", bg= "green", command=cadastrar_cliente).grid(row=5, column=0)
-tk.Button(janela, text="Editar", fg= "black", bg="blue", command=editar_cliente).grid(row=5, column=1)
+tk.Button(janela, text="Cadastrar", fg="black", bg="green", command=cadastrar_cliente).grid(row=5, column=0)
+tk.Button(janela, text="Editar", fg="black", bg="blue", command=editar_cliente).grid(row=5, column=1)
 tk.Button(janela, text="Excluir", fg="black", bg="red", command=excluir_cliente).grid(row=5, column=2)
-
 
 tree = ttk.Treeview(janela, columns=("Nome", "Email", "Telefone", "Endereço"), show="headings")
 tree.heading("Nome", text="Nome")
@@ -137,5 +139,6 @@ tree.heading("Endereço", text="Endereço")
 tree.grid(row=6, column=0, columnspan=4)
 
 tree.bind("<Double-1>", selecionar_item)
+
 mostrar_usuario()
 janela.mainloop()
